@@ -10,7 +10,9 @@ export default function NewsDeck() {
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [loading, setLoading] = useState(true);
   const [selectedArticle, setSelectedArticle] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
+  // --- 🛰️ HEARTBEAT SYNC (FREE TIER) ---
   useEffect(() => {
     const fetchNews = async () => {
       const { data, error } = await supabase
@@ -24,19 +26,19 @@ export default function NewsDeck() {
       }
       setLoading(false);
     };
+
     fetchNews();
 
-    const subscription = supabase
-      .channel('news_updates')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'news_articles' }, (payload) => {
-        setNews((prev) => [payload.new, ...prev]);
-      })
-      .subscribe();
+    // Polling every 30 seconds to bypass expensive Realtime Replication
+    const interval = setInterval(() => {
+      fetchNews();
+      console.log("🛰️ Oracle Sync: Checking for new signals...");
+    }, 30000); 
 
-    return () => { supabase.removeChannel(subscription); };
+    return () => clearInterval(interval);
   }, []);
 
-  // Handle Filtering Logic
+  // --- 🧭 CATEGORY FILTER LOGIC ---
   useEffect(() => {
     if (activeCategory === 'ALL') {
       setFilteredNews(news);
@@ -44,6 +46,25 @@ export default function NewsDeck() {
       setFilteredNews(news.filter(item => item.category === activeCategory));
     }
   }, [activeCategory, news]);
+
+  // --- 🛡️ ADMIN MODE TRIGGER ---
+  const unlockAdmin = () => {
+    const code = prompt("ENTER ORACLE ACCESS CODE:");
+    if (code === "ABUJA-2026") { // You can change this code anytime
+      setIsAdmin(true);
+      alert("ADMIN MODE ACTIVE");
+    }
+  };
+
+  const deleteArticle = async (id: string) => {
+    if (confirm("Permanently delete this intelligence signal?")) {
+      const { error } = await supabase.from('news_articles').delete().eq('id', id);
+      if (!error) {
+        setNews(news.filter(n => n.id !== id));
+        setSelectedArticle(null);
+      }
+    }
+  };
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center p-20 animate-pulse">
@@ -76,36 +97,44 @@ export default function NewsDeck() {
 
       {/* 📱 NEWS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filteredNews.map((item) => (
-          <div 
-            key={item.id} 
-            onClick={() => setSelectedArticle(item)}
-            className="group relative bg-zinc-900/40 border border-white/5 rounded-[2rem] overflow-hidden backdrop-blur-2xl hover:border-cyan-500/30 transition-all duration-500 cursor-pointer shadow-xl"
-          >
-            {item.image_url && (
-              <div className="h-44 w-full overflow-hidden relative">
-                <img src={item.image_url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-80" />
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />
-              </div>
-            )}
-            
-            <div className="p-7">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-[8px] font-black tracking-[0.2em] text-cyan-500 uppercase px-2 py-0.5 border border-cyan-500/20 rounded">
-                  {item.category}
-                </span>
-                <span className="h-px flex-1 bg-white/5" />
-              </div>
+        {filteredNews.length > 0 ? (
+          filteredNews.map((item) => (
+            <div 
+              key={item.id} 
+              onClick={() => setSelectedArticle(item)}
+              className="group relative bg-zinc-900/40 border border-white/5 rounded-[2rem] overflow-hidden backdrop-blur-2xl hover:border-cyan-500/30 transition-all duration-500 cursor-pointer shadow-xl"
+            >
+              {item.image_url && (
+                <div className="h-44 w-full overflow-hidden relative">
+                  <img src={item.image_url} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-80" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />
+                </div>
+              )}
               
-              <h2 className="text-xl font-bold text-zinc-100 leading-tight mb-4 group-hover:text-white line-clamp-2">
-                {item.title}
-              </h2>
-              <p className="text-zinc-500 text-sm leading-relaxed line-clamp-2 font-light">
-                {item.summary}
-              </p>
+              <div className="p-7">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-[8px] font-black tracking-[0.2em] text-cyan-500 uppercase px-2 py-0.5 border border-cyan-500/20 rounded">
+                    {item.category}
+                  </span>
+                  <span className="h-px flex-1 bg-white/5" />
+                </div>
+                
+                <h2 className="text-xl font-bold text-zinc-100 leading-tight mb-4 group-hover:text-white line-clamp-2">
+                  {item.title}
+                </h2>
+                <p className="text-zinc-500 text-sm leading-relaxed line-clamp-2 font-light">
+                  {item.summary}
+                </p>
+              </div>
             </div>
+          ))
+        ) : (
+          <div className="col-span-full text-center py-20 border border-dashed border-white/5 rounded-[2rem]">
+            <p className="text-zinc-600 font-mono text-[10px] uppercase tracking-widest">
+              Waiting for Oracle Signal... No data in {activeCategory}
+            </p>
           </div>
-        ))}
+        )}
       </div>
 
       {/* 🔍 MODAL VIEW */}
@@ -129,9 +158,17 @@ export default function NewsDeck() {
               <p className="text-zinc-400 text-lg leading-relaxed font-light mb-8">
                 {selectedArticle.content || selectedArticle.summary}
               </p>
+              
               <div className="pt-8 border-t border-white/5 flex justify-between items-center text-[9px] font-mono text-zinc-600">
-                <span>ORACLE_NODE_ABUJA</span>
-                <span>{new Date(selectedArticle.created_at).toLocaleString()}</span>
+                <button onClick={unlockAdmin} className="hover:text-cyan-500 transition-colors">ORACLE_NODE_ABUJA</button>
+                <div className="flex gap-4 items-center">
+                   {isAdmin && (
+                    <button onClick={() => deleteArticle(selectedArticle.id)} className="text-red-500 hover:text-red-400 font-bold uppercase tracking-widest">
+                      [ DELETE SIGNAL ]
+                    </button>
+                  )}
+                  <span>{new Date(selectedArticle.created_at).toLocaleString()}</span>
+                </div>
               </div>
             </div>
           </div>
