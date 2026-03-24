@@ -2,13 +2,16 @@ name: 🛰️ OMNI-BUZZ AUTO-SCOUT
 
 on:
   schedule:
-    - cron: '0 * * * *' # Automated run every 60 minutes
-  workflow_dispatch: # Allows you to click "Run Workflow" manually for testing
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   intel_pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 15 # Prevents hanging and saves GitHub minutes
+    timeout-minutes: 15
+    env:
+      # This fixes the Node.js 20/24 warning and future-proofs the runner
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true 
 
     steps:
       - name: 📂 Checkout Repository
@@ -18,8 +21,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'pip' # Speeds up runs by caching libraries
-
+          # Removed 'cache: pip' to fix the "No file matched" error
+          
       - name: 📦 Install Merchant-Grade Dependencies
         run: |
           python -m pip install --upgrade pip
@@ -27,15 +30,11 @@ jobs:
 
       - name: 🛡️ Run Intelligence Pipeline
         env:
-          # Ensure these match your GitHub Repo Settings > Secrets > Actions
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
-          echo "🧹 Starting Database Cleanup..."
           python scripts/cleanup.py
-          
-          echo "🛰️ Starting Deep Scrape & AI Synthesis..."
           python scripts/image_scout.py
 
       - name: ⚠️ Notify Telegram on Failure
@@ -44,9 +43,7 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          # Formatted Markdown message for Telegram
-          MESSAGE="🚨 *OMNI-BUZZ PIPELINE FAILURE*%0A%0A🛑 *Status:* Sync Failed%0A🛠 *Repo:* ${GITHUB_REPOSITORY}%0A🔗 [View Error Logs](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
-          
+          MESSAGE="🚨 *OMNI-BUZZ PIPELINE FAILURE*%0A%0A🛑 *Status:* Sync Failed%0A🔗 [View Error Logs](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
             -d "chat_id=${TELEGRAM_CHAT_ID}" \
             -d "text=${MESSAGE}" \
