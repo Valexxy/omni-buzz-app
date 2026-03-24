@@ -1,10 +1,9 @@
 'use client';
 
-// This line is the "Final Boss" killer—it stops the build-time crash
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 import SmartHeader from '@/components/Header';
 import NewsCard from '@/components/NewsCard';
 
@@ -14,6 +13,14 @@ export default function HomePage() {
 
   useEffect(() => {
     async function getNews() {
+      const supabase = getSupabase();
+      
+      // If supabase isn't ready (build time), just stop here
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const { data, error } = await supabase
           .from('news')
@@ -47,7 +54,7 @@ export default function HomePage() {
             ))
           ) : (
             <p className="col-span-full text-center text-gray-500">
-              No news updates available yet.
+              {process.env.NEXT_PUBLIC_SUPABASE_URL ? 'No news updates available yet.' : 'Configuration in progress...'}
             </p>
           )}
         </div>

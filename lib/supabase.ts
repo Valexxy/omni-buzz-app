@@ -1,8 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 
-// NEXT_PUBLIC_ prefix is mandatory for client-side access in Next.js
-// We provide a fallback URL format so the build doesn't crash before it can read your Vercel keys
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// If the keys are missing (like during build), we export a "lazy" creator
+export const getSupabase = () => {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    // This return prevents the "Invalid URL" crash during build
+    return null;
+  }
+  return createClient(supabaseUrl, supabaseAnonKey);
+};
+
+// For backward compatibility in your other files
+export const supabase = (supabaseUrl && supabaseAnonKey) 
+  ? createClient(supabaseUrl, supabaseAnonKey) 
+  : null;
