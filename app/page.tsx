@@ -6,53 +6,74 @@ import NewsCard from '@/components/NewsCard';
 
 export default function HomePage() {
   const [articles, setArticles] = useState<any[]>([]);
-  const [city, setCity] = useState("SYNCING...");
-  const [loading, setLoading] = useState(true);
+  const [city, setCity] = useState("ABUJA");
+  const [isSyncing, setIsSyncing] = useState(true);
 
   useEffect(() => {
-    // 📍 STEP 1: Get User GPS
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const { latitude, longitude } = pos.coords;
+    // 📍 1. Access Local GPS
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
 
-      try {
-        // 🏙️ STEP 2: Identify Neighborhood/City
-        const geoRes = await fetch(
-          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
-        );
-        const geoData = await geoRes.json();
-        const detectedCity = (geoData.locality || geoData.city || "ABUJA").toUpperCase();
-        setCity(detectedCity);
+        try {
+          // 🏙️ 2. Identify City/District
+          const geoRes = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+          );
+          const geoData = await geoRes.json();
+          const currentCity = (geoData.locality || geoData.city || "ABUJA").toUpperCase();
+          setCity(currentCity);
 
-        // 🛰️ STEP 3: Fetch News (Filtered by latest)
-        const { data } = await supabase
-          .from('news_articles')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        setArticles(data || []);
-      } catch (err) {
-        console.error("Signal Lost:", err);
-      } finally {
-        setLoading(false);
+          // 🛰️ 3. Fetch News Articles
+          const { data } = await supabase
+            .from('news_articles')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          setArticles(data || []);
+        } catch (err) {
+          console.error("Signal Sync Error:", err);
+        } finally {
+          setIsSyncing(false);
+        }
+      },
+      (error) => {
+        console.error("GPS Denied", error);
+        setIsSyncing(false); // Fallback to Abuja default
       }
-    });
+    );
   }, []);
 
-  if (loading) return (
-    <div className="h-screen bg-black flex items-center justify-center font-mono text-green-500 animate-pulse text-xs tracking-[0.5em]">
-      🛰️ ESTABLISHING GEOFENCE...
-    </div>
-  );
+  if (isSyncing) {
+    return (
+      <div className="h-screen bg-black flex flex-col items-center justify-center gap-4">
+        <div className="w-12 h-12 border-2 border-green-500/20 border-t-green-500 rounded-full animate-spin" />
+        <p className="font-mono text-[10px] text-green-500 tracking-[0.5em] animate-pulse">
+          ESTABLISHING GEOFENCE...
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-black pb-20">
+    <main className="min-h-screen bg-black pb-32">
       <SmartHeader locationName={city} />
       
-      <div className="max-w-7xl mx-auto px-8 grid grid-cols-1 md:grid-cols-3 gap-10">
-        {articles.map((art) => (
-          <NewsCard key={art.id} article={art} variant="premium" />
-        ))}
-      </div>
+      <section className="max-w-7xl mx-auto px-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {articles.length > 0 ? (
+            articles.map((art) => (
+              <NewsCard key={art.id} article={art} variant="premium" />
+            ))
+          ) : (
+            <div className="col-span-full py-20 border border-dashed border-white/5 rounded-3xl text-center">
+              <p className="text-gray-600 font-mono text-xs tracking-widest uppercase">
+                Zero news signals detected in this sector.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
     </main>
   );
 }
