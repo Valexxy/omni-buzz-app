@@ -18,8 +18,8 @@ jobs:
         run: pip install requests supabase groq
       - name: Run Scout
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          UNSPLASH_KEY: ${{ secrets.UNSPLASH_KEY }}
+          SUPABASE_URL: ${{https://yawqzipdrqbfagxfdehn.supabase.co}}
+          SUPABASE_KEY: ${{sb_publishable_Z-ABrrS87ypwUa7I8ykehQ_ePvodWD7}}
+          GROQ_API_KEY: ${{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}}
+          UNSPLASH_KEY: ${{BNdQDshc6_QA7WpVYjRIbLd4Jem1JeMlCjrA8vE0e_M}}
         run: python image_scout.py
