@@ -1,0 +1,32 @@
+name: Hourly Intel Sync
+on:
+  schedule:
+    - cron: '0 * * * *' # Runs every hour
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          
+      - name: Install dependencies
+        # Added all necessary libraries for the full 50-source pipeline
+        run: pip install supabase requests feedparser groq
+        
+      - name: Run Intelligence Pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }} # MUST be Service Role Key
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          # 1. Purge data older than 3 days
+          python scripts/cleanup.py
+          
+          # 2. Hunt, Synthesize, and Geo-tag 50+ sources
+          python scripts/image_scout.py
