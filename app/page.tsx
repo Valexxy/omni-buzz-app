@@ -1,9 +1,11 @@
 'use client';
 
+// This tells Vercel: "Don't try to load the database during the build."
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import { getSupabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+import { supabaseConfig } from '@/lib/supabase';
 import SmartHeader from '@/components/Header';
 import NewsCard from '@/components/NewsCard';
 
@@ -13,15 +15,15 @@ export default function HomePage() {
 
   useEffect(() => {
     async function getNews() {
-      const supabase = getSupabase();
-      
-      // If supabase isn't ready (build time), just stop here
-      if (!supabase) {
+      // Check if keys exist in the environment
+      if (!supabaseConfig.url || !supabaseConfig.anonKey) {
         setLoading(false);
         return;
       }
 
       try {
+        const supabase = createClient(supabaseConfig.url, supabaseConfig.anonKey);
+        
         const { data, error } = await supabase
           .from('news')
           .select('*')
@@ -54,7 +56,7 @@ export default function HomePage() {
             ))
           ) : (
             <p className="col-span-full text-center text-gray-500">
-              {process.env.NEXT_PUBLIC_SUPABASE_URL ? 'No news updates available yet.' : 'Configuration in progress...'}
+              {supabaseConfig.url ? 'No news updates available yet.' : 'Please add your Supabase keys to Vercel.'}
             </p>
           )}
         </div>
