@@ -48,11 +48,23 @@ def process_and_save():
             # (Insert your previous AI risk and LGA extraction logic here)
             # For brevity, let's assume we create a basic record first
             data = {
+                # 2. Extract a clean summary from the RSS entry
+            # Some RSS feeds use 'summary', others use 'description'
+            raw_summary = entry.get("summary", entry.get("description", ""))
+            
+            # Clean HTML tags if any exist in the summary
+            import re
+            clean_summary = re.sub('<[^<]+?>', '', raw_summary)[:300] # Limit to 300 chars
+
+            data = {
                 "title": title,
-                "content": entry.get("summary", "New report from " + url),
+                "content": clean_summary if clean_summary else "Tap to read full intelligence report.",
                 "author_name": "OMNI-SCOUT",
-                "category": "Trade & Logistics",
-                "location": None # This triggers the Scout's next phase
+                "category": "Logistics & Trade",
+                "source_url": link,
+                "image_url": f"https://source.unsplash.com/featured/?nigeria,logistics,trade&sig={hash(title)}",
+                "location": None 
+            }
             }
             
             supabase.table("news_articles").insert(data).execute()
