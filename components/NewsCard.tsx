@@ -1,3 +1,12 @@
+{/* The Title */}
+<h3 className="text-white font-bold leading-tight line-clamp-2 uppercase tracking-tighter text-lg mb-2">
+  {article.title}
+</h3>
+
+{/* The Summary/Content */}
+<p className="text-zinc-400 text-xs line-clamp-3 font-light leading-relaxed">
+  {article.content} 
+</p>
 export default function NewsCard({ article }: { article: any }) {
   // Extract the Risk Level from the category or a dedicated column
   const isHighRisk = article.category?.includes("HIGH");
