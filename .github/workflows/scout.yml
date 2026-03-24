@@ -1,8 +1,9 @@
 name: 🛰️ OMNI-BUZZ GEO-SCOUT
+
 on:
   schedule:
-    - cron: '*/10 * * * *' # ⏱️ Auto-runs every 10 minutes
-  workflow_dispatch:      # 🚀 Allows you to click "Run Workflow" manually
+    - cron: '*/10 * * * *' # Auto-scout every 10 mins
+  workflow_dispatch:      # Manual trigger button
 
 jobs:
   build:
@@ -15,14 +16,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'pip'
 
       - name: 📦 Install Dependencies
-        run: pip install requests supabase groq
+        run: |
+          pip install requests supabase groq
 
       - name: 🧠 Run Geo-Scout Intelligence
         env:
-          # This connects your GitHub Secrets to the Python Script
+          # 🛡️ These MUST match your GitHub Secret names exactly
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
